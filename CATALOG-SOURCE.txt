@@ -1,0 +1,1 @@
+Skin catalog snapshot downloaded 2026-11-16 from https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json. The source parses Counter-Strike game files and identifies StatTrak/Souvenir availability. The bundle includes base, StatTrak and Souvenir variants with Steam CDN images; prices are fetched separately from Steam Community Market.

@@ -1,0 +1,12 @@
+{
+  "name": "downgrade-telegram-mini-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Downgrade CS2 Telegram Mini App prototype",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

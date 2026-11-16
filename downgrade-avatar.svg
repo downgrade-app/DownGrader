@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="24" y1="17" x2="228" y2="241" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#222d3b"/><stop offset="1" stop-color="#090d14"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="57" y1="42" x2="206" y2="214" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f0ffc1"/><stop offset=".5" stop-color="#d4ff63"/><stop offset="1" stop-color="#71bd40"/>
+    </linearGradient>
+    <filter id="glow" x="19" y="18" width="218" height="224" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="9" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="67" fill="url(#bg)"/>
+  <rect x="9" y="9" width="238" height="238" rx="66" stroke="#d4ff63" stroke-opacity=".22" stroke-width="2"/>
+  <path d="M66 63h111v28H97v30h66v28H97v45H66V63Z" fill="url(#edge)" filter="url(#glow)"/>
+  <path d="m184 153 25 25-25 25v-16h-49v-18h49v-16Z" fill="#d4ff63"/>
+  <circle cx="200" cy="58" r="4" fill="#f2ffc8"/><circle cx="216" cy="75" r="2" fill="#d4ff63"/>
+</svg>

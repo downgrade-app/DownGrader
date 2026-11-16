@@ -1,0 +1,30 @@
+// Local preview for the Downgrade Telegram Mini App.
+// Start from this folder with: node server.js, then visit http://localhost:8787
+const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
+const { URL } = require('node:url');
+const root = __dirname, port = Number(process.env.PORT || 8789);
+const priceCache = new Map(), iconCache = new Map();
+let skinportCache = null, skinportLoadedAt = 0, skinportLoading = null;
+const get = async url => { const r = await fetch(url, {headers:{'User-Agent':'Mozilla/5.0 DowngradeMiniApp/1.0','Accept':'application/json,text/plain,*/*'},signal:AbortSignal.timeout(12000)}); if(!r.ok)throw new Error('Steam Market HTTP '+r.status); return r.json(); };
+function parsePrice(s){if(!s)return null;const m=String(s).match(/[\d.,\s]+/);if(!m)return null;const raw=m[0].replace(/\s/g,'');const at=Math.max(raw.lastIndexOf(','),raw.lastIndexOf('.'));const a=raw.slice(0,at).replace(/[.,]/g,'');const b=raw.slice(at+1).replace(/[.,]/g,'');const n=Number(a+(b?'.'+b:''));return Number.isFinite(n)?n:null}
+async function loadSkinport(){if(skinportCache&&Date.now()-skinportLoadedAt<300000)return skinportCache;if(skinportLoading)return skinportLoading;skinportLoading=(async()=>{const r=await fetch('https://api.skinport.com/v1/items?app_id=730&currency=RUB&tradable=1',{headers:{'User-Agent':'Mozilla/5.0 DowngradeMiniApp/1.0','Accept':'application/json','Accept-Encoding':'br'},signal:AbortSignal.timeout(25000)});if(!r.ok)throw new Error('Skinport HTTP '+r.status);const rows=await r.json(),map=new Map();for(const row of rows)map.set(row.market_hash_name,row);skinportCache=map;skinportLoadedAt=Date.now();return map})();try{return await skinportLoading}finally{skinportLoading=null}}
+function skinportValue(row){for(const key of ['min_price','suggested_price','median_price','mean_price']){const n=Number(row?.[key]);if(Number.isFinite(n)&&n>0)return {price:n,source:key==='min_price'?'Skinport':'Skinport suggested',marketHashName:row.market_hash_name}}return null}
+async function marketPrice(name){const c=priceCache.get(name);if(c&&Date.now()-c.t<300000)return c.v;let v=null;try{const u=new URL('https://steamcommunity.com/market/priceoverview/');u.search=new URLSearchParams({appid:'730',country:'RU',currency:'5',market_hash_name:name});const d=await get(u);const p=parsePrice(d.lowest_price)||parsePrice(d.median_price);if(p>0)v={price:p,lowest:d.lowest_price||null,median:d.median_price||null,volume:d.volume||null,source:'Steam Community Market'}}catch{}if(!v){try{const map=await loadSkinport(),exact=map.get(name);v=skinportValue(exact);if(!v){const base=name.replace(/^(StatTrak™ |Souvenir )/,''),needle=base.slice(0,base.lastIndexOf(' ('));const sibling=[...map.values()].filter(row=>row.market_hash_name.startsWith(needle+' (')).map(skinportValue).filter(Boolean).sort((a,b)=>a.price-b.price)[0];if(sibling)v={...sibling,source:'Skinport comparable variant',estimated:true}}}catch{}}priceCache.set(name,{t:Date.now(),v});return v}
+async function marketIcon(name){
+ const c=iconCache.get(name);if(c&&Date.now()-c.t<86400000)return c.url;
+ const marketName=name.includes('(')||!name.includes('|')?name:`${name} (Field-Tested)`;
+ const u=new URL('https://steamcommunity.com/market/listings/730/'+encodeURIComponent(marketName)+'/render/');u.search=new URLSearchParams({start:'0',count:'1',country:'RU',language:'english',currency:'5'});
+ const r=await fetch(u,{headers:{'User-Agent':'Mozilla/5.0 DowngradeMiniApp/1.0','Accept':'application/json,text/html,*/*'},signal:AbortSignal.timeout(15000)});if(!r.ok)throw new Error('Steam Market HTTP '+r.status);
+ const body=await r.text();let icon=body.match(/icon_url.{0,80}?([a-zA-Z0-9_-]{50,})/)?.[1];
+ if(!icon){try{const d=JSON.parse(body);for(const app of Object.values(d.assets||{}))for(const context of Object.values(app||{}))for(const asset of Object.values(context||{}))if(asset?.icon_url){icon=asset.icon_url;break}}catch{}}
+ const result=icon?'https://community.akamai.steamstatic.com/economy/image/'+icon+'/360fx360f':null;if(result)iconCache.set(name,{t:Date.now(),url:result});return result
+}
+function json(res,status,obj){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(obj))}
+http.createServer(async(req,res)=>{const u=new URL(req.url,'http://localhost');try{
+ if(u.pathname==='/healthz'){res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});return res.end('ok')}
+ if(u.pathname==='/api/prices'){const list=[...new Set((u.searchParams.get('names')||'').split('~').map(x=>x.trim()).filter(Boolean))].slice(0,25),prices={};await Promise.all(list.map(async name=>{try{prices[name]=await marketPrice(name)}catch{prices[name]=null}}));return json(res,200,{source:'Steam Community Market / Skinport',currency:'RUB',updatedAt:new Date().toISOString(),prices})}
+ if(u.pathname==='/api/icon'){const name=(u.searchParams.get('name')||'').slice(0,140);if(!name)return json(res,400,{error:'Missing name'});try{return json(res,200,{url:await marketIcon(name)})}catch{return json(res,200,{url:null})}}
+ const pathname=u.pathname==='/'?'/index.html':decodeURIComponent(u.pathname),file=path.resolve(root,'.'+pathname);if(!file.startsWith(root+path.sep))return json(res,403,{error:'Forbidden'});if(!fs.existsSync(file)||!fs.statSync(file).isFile())return json(res,404,{error:'Not found'});const ext=path.extname(file),types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'};res.writeHead(200,{'Content-Type':types[ext]||'application/octet-stream'});fs.createReadStream(file).pipe(res)
+ }catch(e){json(res,502,{error:'Steam Market is unavailable',detail:e.message})}}).listen(port,()=>console.log(`Downgrade: http://localhost:${port}`));

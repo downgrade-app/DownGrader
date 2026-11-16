@@ -5,6 +5,12 @@ DOWNGRADE — прототип Telegram Mini App
 Не открывай index.html напрямую через file:// — картинки и цены загружаются через локальный сервер.
 Чтобы запустить проект вручную, требуется Node.js 18+: в папке проекта выполни node server.js, затем открой http://localhost:8789.
 
+Подключение Telegram-бота (по аналогии с Gift Market):
+1. Создай файл .env рядом с bot.py и заполни: BOT_TOKEN=токен от @BotFather, WEBAPP_URL=https://адрес-сервиса.onrender.com
+2. Установи зависимости: py -m pip install -r requirements-bot.txt
+3. Запусти: py bot.py — бот отвечает /start кнопкой «Открыть DOWNGRADE» и ставит кнопку меню бота на Mini App.
+4. Альтернатива без бота: @BotFather > /mybots > Bot Settings > Menu Button > задай WEBAPP_URL.
+
 Публикация на Render Free:
 1. Создай GitHub-репозиторий из содержимого этой папки и подключи его к Render.
 2. В Render выбери New > Blueprint и укажи этот репозиторий. Настройки сервиса заданы в render.yaml.
